@@ -1,0 +1,70 @@
+{
+  "cases": [
+    {
+      "id": "golden_right_keys",
+      "remainder": "fuel 40 L vessel V-104 at D4",
+      "mockLlmJson": {
+        "status": "ok",
+        "events": [
+          {
+            "eventTypeId": "fuel_log",
+            "vesselId": "v-104",
+            "slipId": "slip-d4",
+            "metrics": [
+              {
+                "metricKey": "fuel_liters",
+                "numberValue": 40,
+                "rawNumberValue": 40,
+                "userUnit": "liter",
+                "rawUnitToken": "L"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "status": "ok",
+        "eventTypeId": "fuel_log",
+        "vesselId": "v-104",
+        "slipId": "slip-d4",
+        "metricKey": "fuel_liters",
+        "canonicalValue": 40
+      }
+    },
+    {
+      "id": "golden_needs_clarification",
+      "remainder": "logged something at the dock",
+      "mockLlmJson": {
+        "status": "needs_clarification",
+        "clarificationQuestion": "Which vessel and what metric should I log?"
+      },
+      "expect": {
+        "status": "needs_clarification"
+      }
+    },
+    {
+      "id": "golden_disallowed_id_after_llm",
+      "remainder": "fuel on mystery boat",
+      "mockLlmJson": {
+        "status": "ok",
+        "events": [
+          {
+            "eventTypeId": "fuel_log",
+            "vesselId": "v-not-real",
+            "metrics": [
+              {
+                "metricKey": "fuel_liters",
+                "numberValue": 3,
+                "rawNumberValue": 3
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "status": "failed",
+        "errorIncludes": "Unknown vesselId"
+      }
+    }
+  ]
+}
