@@ -14,7 +14,7 @@ Sanitized showcase of agentic patterns from a private production system: determi
 
 ## Status
 
-**PR2 policy graph.** Deterministic inbound evaluate → decision trace; tools/specialists next.
+**PR3 catalog + `/log` tools.** Extract → allowlist → units → `log_event`. Notice/specialists next.
 
 ## How to run (so far)
 
@@ -29,20 +29,22 @@ Live `npm run demo` arrives in a later PR.
 
 ## What a reviewer should look at first
 
-1. [`src/orchestration/run.ts`](src/orchestration/run.ts) — one inbound → decision step (entrypoint)
-2. [`src/orchestration/evaluateInbound.ts`](src/orchestration/evaluateInbound.ts) — pier gating + `/log` / `/notice`
-3. [`examples/inbound-fixtures.json`](examples/inbound-fixtures.json) — expected policy outcomes
+1. [`src/orchestration/run.ts`](src/orchestration/run.ts) — policy decision, then `/log` tool path
+2. [`src/tools/handleLog.ts`](src/tools/handleLog.ts) — extract → match-before-mint → allowlist → `log_event`
+3. [`evals/log-extract.goldens.json`](evals/log-extract.goldens.json) — right keys / clarify / reject invented ids
 
 ## Mapping (preview)
 
-| Production pattern                         | Demo module                             |
-| ------------------------------------------ | --------------------------------------- |
-| Inbound policy (group only when addressed) | `src/orchestration/evaluateInbound.ts`  |
-| Slash-command parse before free-text       | `src/orchestration/parseCommands.ts`    |
-| Claimed message → worker decision          | `src/orchestration/run.ts` (in-process) |
-| Provider chat completion + timeout         | `src/llm/`                              |
-| `{ error, data }` result envelope          | `src/result.ts`                         |
-| operationId + step traces                  | `src/tracing/types.ts`                  |
+| Production pattern                         | Demo module                                         |
+| ------------------------------------------ | --------------------------------------------------- |
+| Inbound policy (group only when addressed) | `src/orchestration/evaluateInbound.ts`              |
+| Slash-command parse before free-text       | `src/orchestration/parseCommands.ts`                |
+| Claimed message → worker decision          | `src/orchestration/run.ts` (in-process)             |
+| Zod extract + server allowlist             | `src/tools/extractLogEvents.ts` + `src/guardrails/` |
+| Match-before-mint (no silent invent)       | `src/tools/catalogTools.ts`                         |
+| Provider chat completion + timeout         | `src/llm/`                                          |
+| `{ error, data }` result envelope          | `src/result.ts`                                     |
+| operationId + step traces                  | `src/tracing/types.ts`                              |
 
 Full architecture diagram and prod→demo collapse: coming in `ARCHITECTURE.md`.
 

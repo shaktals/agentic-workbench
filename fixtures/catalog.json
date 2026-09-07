@@ -1,0 +1,123 @@
+{
+  "slips": [
+    {
+      "id": "slip-a1",
+      "code": "A1",
+      "name": "North Quay A1",
+      "aliases": ["a1", "north a1", "north quay a1"]
+    },
+    {
+      "id": "slip-a2",
+      "code": "A2",
+      "name": "North Quay A2",
+      "aliases": ["a2", "north a2"]
+    },
+    {
+      "id": "slip-b1",
+      "code": "B1",
+      "name": "Basin B1",
+      "aliases": ["b1", "basin b1"]
+    },
+    {
+      "id": "slip-b2",
+      "code": "B2",
+      "name": "Basin B2",
+      "aliases": ["b2", "basin b2"]
+    },
+    {
+      "id": "slip-c3",
+      "code": "C3",
+      "name": "Outer Finger C3",
+      "aliases": ["c3", "outer c3", "finger c3"]
+    },
+    {
+      "id": "slip-d4",
+      "code": "D4",
+      "name": "Service Dock D4",
+      "aliases": ["d4", "service d4", "fuel dock"]
+    }
+  ],
+  "vessels": [
+    {
+      "id": "v-101",
+      "registration": "V-101",
+      "name": "Meridian",
+      "aliases": ["meridian"]
+    },
+    {
+      "id": "v-104",
+      "registration": "V-104",
+      "name": "Aurora",
+      "aliases": ["aurora"]
+    },
+    {
+      "id": "v-220",
+      "registration": "V-220",
+      "name": "Harbor Gull",
+      "aliases": ["harbor gull", "gull"]
+    },
+    {
+      "id": "v-331",
+      "registration": "V-331",
+      "name": "Pebble",
+      "aliases": ["pebble"]
+    }
+  ],
+  "eventTypes": [
+    {
+      "id": "fuel_log",
+      "label": "Fuel log",
+      "metrics": [
+        {
+          "key": "fuel_liters",
+          "label": "Fuel volume",
+          "canonicalUnit": "liter",
+          "unitTokens": [
+            "l",
+            "liter",
+            "liters",
+            "litre",
+            "litres",
+            "gal",
+            "gallon",
+            "gallons"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pump_out",
+      "label": "Pump-out",
+      "metrics": [
+        {
+          "key": "pump_out",
+          "label": "Pump-out completed",
+          "canonicalUnit": "boolean",
+          "unitTokens": []
+        }
+      ]
+    },
+    {
+      "id": "berth_hold",
+      "label": "Berth hold",
+      "metrics": [
+        {
+          "key": "berth_hold_hours",
+          "label": "Hold duration",
+          "canonicalUnit": "hour",
+          "unitTokens": [
+            "h",
+            "hr",
+            "hrs",
+            "hour",
+            "hours",
+            "min",
+            "mins",
+            "minute",
+            "minutes"
+          ]
+        }
+      ]
+    }
+  ]
+}
