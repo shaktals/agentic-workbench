@@ -1,0 +1,35 @@
+[
+  {
+    "id": "ex_pier_chatter",
+    "channel": "pier",
+    "body": "anyone seen the fuel truck?",
+    "expect": { "action": "skip", "reason": "pier_not_addressed" }
+  },
+  {
+    "id": "ex_pier_addressed",
+    "channel": "pier",
+    "body": "desk — which slip for Meridian?",
+    "expect": { "action": "continue" }
+  },
+  {
+    "id": "ex_radio_dm",
+    "channel": "radio",
+    "body": "need a berth hold for Aurora tonight",
+    "expect": { "action": "continue" }
+  },
+  {
+    "id": "ex_log",
+    "channel": "pier",
+    "body": "/log fuel 40 L vessel V-104",
+    "expect": { "action": "log", "remainder": "fuel 40 L vessel V-104" }
+  },
+  {
+    "id": "ex_notice",
+    "channel": "radio",
+    "body": "/notice gale warning for outer basin",
+    "expect": {
+      "action": "notice",
+      "remainder": "gale warning for outer basin"
+    }
+  }
+]

@@ -6,19 +6,15 @@ Sanitized showcase of agentic patterns from a private production system: determi
 
 ## What this is / is not
 
-
 | Is                                               | Is not                                               |
 | ------------------------------------------------ | ---------------------------------------------------- |
 | One working pipeline you can read in one sitting | A dump of a product codebase                         |
 | Patterns: policy graph, allowlists, HITL, traces | Training / wellness / companion product domain       |
 | Clone → one API key → run                        | Postgres, Redis, Expo, Docker, k8s, or a message bus |
 
-
-
-
 ## Status
 
-**PR1 scaffold.** LLM adapter + result/trace types + unit tests. Harbor policy graph lands next.
+**PR2 policy graph.** Deterministic inbound evaluate → decision trace; tools/specialists next.
 
 ## How to run (so far)
 
@@ -33,21 +29,20 @@ Live `npm run demo` arrives in a later PR.
 
 ## What a reviewer should look at first
 
-1. `[src/llm/completeChat.ts](src/llm/completeChat.ts)` — OpenAI-compatible completion with injectable fetch
-2. `[src/tracing/types.ts](src/tracing/types.ts)` — per-step trace shape
-3. `[test/llm/completeChat.test.ts](test/llm/completeChat.test.ts)` — missing env, timeout, non-JSON, usage
-
-
+1. [`src/orchestration/run.ts`](src/orchestration/run.ts) — one inbound → decision step (entrypoint)
+2. [`src/orchestration/evaluateInbound.ts`](src/orchestration/evaluateInbound.ts) — pier gating + `/log` / `/notice`
+3. [`examples/inbound-fixtures.json`](examples/inbound-fixtures.json) — expected policy outcomes
 
 ## Mapping (preview)
 
-
-| Production pattern                 | Demo module            |
-| ---------------------------------- | ---------------------- |
-| Provider chat completion + timeout | `src/llm/`             |
-| `{ error, data }` result envelope  | `src/result.ts`        |
-| operationId + step traces          | `src/tracing/types.ts` |
-
+| Production pattern                         | Demo module                             |
+| ------------------------------------------ | --------------------------------------- |
+| Inbound policy (group only when addressed) | `src/orchestration/evaluateInbound.ts`  |
+| Slash-command parse before free-text       | `src/orchestration/parseCommands.ts`    |
+| Claimed message → worker decision          | `src/orchestration/run.ts` (in-process) |
+| Provider chat completion + timeout         | `src/llm/`                              |
+| `{ error, data }` result envelope          | `src/result.ts`                         |
+| operationId + step traces                  | `src/tracing/types.ts`                  |
 
 Full architecture diagram and prod→demo collapse: coming in `ARCHITECTURE.md`.
 
