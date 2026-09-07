@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 
 import { run } from '#orchestration/run.ts'
 import type { InboundMessage } from '#orchestration/types.ts'
+import { createMemoryHitlPort } from '#hitl/port.ts'
 import { ok } from '#result.ts'
 import type { LlmPort } from '#tools/extractLogEvents.ts'
 import { createMemoryEventStore } from '#tools/logEvent.ts'
@@ -58,20 +59,26 @@ describe('run', () => {
     assert.equal(result.data?.operationId, fixedId())
   })
 
-  it('continues for radio free-text and stamps the decision', async () => {
+  it('classifies radio free-text to a specialist (catalog lookup)', async () => {
     const result = await run({
       inbound: msg({
         channel: 'radio',
-        body: 'need a berth hold for Aurora',
+        body: 'which slip is Meridian on?',
       }),
       now: fixedNow,
       createOperationId: fixedId,
+      hitl: createMemoryHitlPort('pending'),
     })
 
     assert.equal(result.error, undefined)
+    assert.equal(result.data?.decision.action, 'continue')
+    assert.equal(result.data?.shouldContinue, false)
     assert.equal(result.data?.trace.status, 'ok')
-    assert.equal(result.data?.shouldContinue, true)
-    assert.deepEqual(result.data?.decision, { action: 'continue' })
+    assert.ok(
+      result.data?.trace.steps.some(
+        s => s.agent === 'classifier' && s.summary === 'lookup',
+      ),
+    )
   })
 
   it('runs /log through extract + allowlist + log_event', async () => {
@@ -130,5 +137,25 @@ describe('run', () => {
     assert.equal(result.data?.shouldContinue, false)
     assert.deepEqual(result.data?.decision, { action: 'notice_empty' })
     assert.equal(result.data?.trace.status, 'ok')
+  })
+
+  it('parks /notice via clerk + HITL', async () => {
+    const result = await run({
+      inbound: msg({
+        channel: 'radio',
+        body: '/notice gale warning for outer basin near slip C3',
+      }),
+      now: fixedNow,
+      createOperationId: fixedId,
+      hitl: createMemoryHitlPort('pending'),
+    })
+
+    assert.equal(result.error, undefined)
+    assert.equal(result.data?.trace.status, 'needs_approval')
+    assert.ok(
+      result.data?.trace.steps.some(
+        s => s.tool === 'send_notice' && s.summary === 'parked',
+      ),
+    )
   })
 })

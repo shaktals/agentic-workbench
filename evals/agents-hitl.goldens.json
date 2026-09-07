@@ -1,0 +1,38 @@
+{
+  "cases": [
+    {
+      "id": "eval_right_specialist_clerk",
+      "text": "please send a gale warning notice for the outer basin",
+      "expectSpecialist": "clerk",
+      "expectStatus": "needs_approval"
+    },
+    {
+      "id": "eval_right_specialist_catalog",
+      "text": "which slip is Harbor Gull on?",
+      "expectSpecialist": "catalog",
+      "expectStatus": "ok"
+    },
+    {
+      "id": "eval_critic_caught_bad_claim",
+      "mode": "notice_bad_claim",
+      "sourceText": "weather looks rough offshore",
+      "badBody": "Meridian must leave slip B2 in 9 hours",
+      "expectStatus": "failed",
+      "expectCriticReject": true
+    },
+    {
+      "id": "eval_stopped_instead_of_sending",
+      "text": "broadcast weather advisory gale near slip C3",
+      "expectSpecialist": "clerk",
+      "expectStatus": "needs_approval",
+      "expectParked": true
+    },
+    {
+      "id": "eval_max_steps_stop",
+      "text": "which vessel is Meridian?",
+      "maxSteps": 1,
+      "priorStep": true,
+      "expectStatus": "max_steps"
+    }
+  ]
+}

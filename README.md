@@ -14,7 +14,7 @@ Sanitized showcase of agentic patterns from a private production system: determi
 
 ## Status
 
-**PR3 catalog + `/log` tools.** Extract → allowlist → units → `log_event`. Notice/specialists next.
+**PR4 seats + HITL.** Classifier → one specialist; critic; `send_notice` parks for `npm run approve`.
 
 ## How to run (so far)
 
@@ -25,26 +25,30 @@ npm test
 npm run typecheck
 ```
 
+Approve a parked notice (after a run that created `var/pending/<operationId>.json`):
+
+```sh
+npm run approve -- <operationId>
+```
+
 Live `npm run demo` arrives in a later PR.
 
 ## What a reviewer should look at first
 
-1. [`src/orchestration/run.ts`](src/orchestration/run.ts) — policy decision, then `/log` tool path
-2. [`src/tools/handleLog.ts`](src/tools/handleLog.ts) — extract → match-before-mint → allowlist → `log_event`
-3. [`evals/log-extract.goldens.json`](evals/log-extract.goldens.json) — right keys / clarify / reject invented ids
+1. [`src/orchestration/run.ts`](src/orchestration/run.ts) — policy → log / notice / classifier path
+2. [`src/tools/runSpecialistPath.ts`](src/tools/runSpecialistPath.ts) — one specialist + maxSteps
+3. [`src/hitl/port.ts`](src/hitl/port.ts) — park `send_notice` until approve
 
 ## Mapping (preview)
 
-| Production pattern                         | Demo module                                         |
-| ------------------------------------------ | --------------------------------------------------- |
-| Inbound policy (group only when addressed) | `src/orchestration/evaluateInbound.ts`              |
-| Slash-command parse before free-text       | `src/orchestration/parseCommands.ts`                |
-| Claimed message → worker decision          | `src/orchestration/run.ts` (in-process)             |
-| Zod extract + server allowlist             | `src/tools/extractLogEvents.ts` + `src/guardrails/` |
-| Match-before-mint (no silent invent)       | `src/tools/catalogTools.ts`                         |
-| Provider chat completion + timeout         | `src/llm/`                                          |
-| `{ error, data }` result envelope          | `src/result.ts`                                     |
-| operationId + step traces                  | `src/tracing/types.ts`                              |
+| Production pattern              | Demo module                                |
+| ------------------------------- | ------------------------------------------ |
+| Ops classifier → one seat       | `src/agents/classify.ts`                   |
+| Draft vs human send             | `src/hitl/` + `send_notice`                |
+| Claim / allowlist critic        | `src/agents/critic.ts` + `src/guardrails/` |
+| Inbound policy                  | `src/orchestration/evaluateInbound.ts`     |
+| Zod extract + match-before-mint | `src/tools/`                               |
+| Provider chat completion        | `src/llm/`                                 |
 
 Full architecture diagram and prod→demo collapse: coming in `ARCHITECTURE.md`.
 
