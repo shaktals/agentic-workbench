@@ -1,3 +1,4 @@
+import { reportError } from '../observability/reportError.ts'
 import { err, ok, type Result } from '../result.ts'
 import { readLlmRuntimeEnv } from './env.ts'
 import type {
@@ -64,12 +65,19 @@ async function fetchChat(
   timeoutMs: number,
 ): Promise<Result<Response, LlmError>> {
   try {
-    return ok(await fetchImpl(url, init))
+    const response = await fetchImpl(url, init)
+
+    return ok(response)
   } catch (e) {
     const aborted =
       signal.aborted || (e instanceof Error && e.name === 'AbortError')
 
     if (aborted) {
+      reportError({
+        scope: 'llm.timeout',
+        meta: { url, timeoutMs },
+        error: e,
+      })
       return err(
         llmError(
           'LLM_TIMEOUT',
@@ -78,10 +86,30 @@ async function fetchChat(
       )
     }
 
+    reportError({
+      scope: 'llm.network',
+      meta: { url, timeoutMs },
+      error: e,
+    })
+    return err(llmError('LLM_NETWORK', 'LLM network request failed.'))
+  }
+}
+
+async function readResponseText(
+  response: Response,
+): Promise<Result<string, LlmError>> {
+  try {
+    return ok(await response.text())
+  } catch (e) {
+    reportError({
+      scope: 'llm.response_body',
+      meta: { status: response.status },
+      error: e,
+    })
     return err(
       llmError(
-        'LLM_NETWORK',
-        e instanceof Error ? e.message : 'LLM network request failed.',
+        'LLM_MALFORMED_RESPONSE',
+        'LLM response body could not be read.',
       ),
     )
   }
@@ -90,7 +118,12 @@ async function fetchChat(
 function parseJsonBody(rawText: string): Result<unknown, LlmError> {
   try {
     return ok(JSON.parse(rawText) as unknown)
-  } catch {
+  } catch (e) {
+    reportError({
+      scope: 'llm.json_parse',
+      meta: { preview: rawText.slice(0, 200) },
+      error: e,
+    })
     return err(
       llmError(
         'LLM_MALFORMED_RESPONSE',
@@ -175,7 +208,9 @@ export async function completeChat(
     if (fetched.error) return fetched
 
     const latencyMs = Date.now() - started
-    const rawText = await fetched.data.text()
+    const raw = await readResponseText(fetched.data)
+    if (raw.error) return raw
+    const rawText = raw.data
 
     if (!fetched.data.ok) {
       return err(

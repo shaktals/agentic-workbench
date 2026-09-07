@@ -1,8 +1,16 @@
 import assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import { afterEach, describe, it } from 'node:test'
 
 import { completeChat } from '#llm/completeChat.ts'
 import type { FetchLike, LlmRuntimeEnv } from '#llm/types.ts'
+import {
+  setReportErrorSink,
+  type ReportErrorInput,
+} from '#observability/reportError.ts'
+
+afterEach(() => {
+  setReportErrorSink(undefined)
+})
 
 const runtime: LlmRuntimeEnv = {
   apiKey: 'sk-test',
@@ -93,7 +101,12 @@ describe('completeChat', () => {
     })
   })
 
-  it('returns LLM_MALFORMED_RESPONSE for non-JSON bodies', async () => {
+  it('returns LLM_MALFORMED_RESPONSE for non-JSON bodies and reports the parse error', async () => {
+    const reported: ReportErrorInput[] = []
+    setReportErrorSink(input => {
+      reported.push(input)
+    })
+
     const result = await completeChat(
       {
         systemPrompt: 'sys',
@@ -110,6 +123,42 @@ describe('completeChat', () => {
     )
 
     assert.equal(result.error?.code, 'LLM_MALFORMED_RESPONSE')
+    assert.equal(result.error?.message, 'LLM response body was not valid JSON.')
+    assert.equal(result.error?.details, 'not-json')
+    assert.equal(reported.length, 1)
+    assert.equal(reported[0]?.scope, 'llm.json_parse')
+    assert.ok(reported[0]?.error instanceof SyntaxError)
+  })
+
+  it('returns LLM_NETWORK with a stable message and reports the thrown cause', async () => {
+    const reported: ReportErrorInput[] = []
+    setReportErrorSink(input => {
+      reported.push(input)
+    })
+
+    const cause = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:9'), {
+      code: 'ECONNREFUSED',
+    })
+    const thrown = new Error('fetch failed', { cause })
+
+    const result = await completeChat(
+      {
+        systemPrompt: 'sys',
+        messages: [{ role: 'user', content: 'hi' }],
+      },
+      {
+        runtime,
+        fetch: async () => {
+          throw thrown
+        },
+      },
+    )
+
+    assert.equal(result.error?.code, 'LLM_NETWORK')
+    assert.equal(result.error?.message, 'LLM network request failed.')
+    assert.equal(reported.length, 1)
+    assert.equal(reported[0]?.scope, 'llm.network')
+    assert.equal(reported[0]?.error, thrown)
   })
 
   it('returns LLM_MALFORMED_RESPONSE when choices content is missing', async () => {
@@ -144,7 +193,12 @@ describe('completeChat', () => {
     assert.equal(result.error?.status, 429)
   })
 
-  it('returns LLM_TIMEOUT when the request is aborted', async () => {
+  it('returns LLM_TIMEOUT when the request is aborted and reports the abort', async () => {
+    const reported: ReportErrorInput[] = []
+    setReportErrorSink(input => {
+      reported.push(input)
+    })
+
     const result = await completeChat(
       {
         systemPrompt: 'sys',
@@ -164,6 +218,13 @@ describe('completeChat', () => {
     )
 
     assert.equal(result.error?.code, 'LLM_TIMEOUT')
+    assert.equal(result.error?.message, 'LLM request timed out after 5ms.')
+    assert.equal(reported.length, 1)
+    assert.equal(reported[0]?.scope, 'llm.timeout')
+    assert.ok(
+      reported[0]?.error instanceof Error &&
+        reported[0].error.name === 'AbortError',
+    )
   })
 
   it('forwards response_format when JSON mode is requested', async () => {
