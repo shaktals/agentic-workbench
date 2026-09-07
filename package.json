@@ -1,0 +1,37 @@
+{
+  "name": "agentic-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Harbor-desk agent loop: policy graph, typed tools, HITL park, traces, and mock evals",
+  "type": "module",
+  "license": "MIT",
+  "author": "Talles Hentges",
+  "engines": {
+    "node": ">=22"
+  },
+  "imports": {
+    "#*": "./src/*"
+  },
+  "scripts": {
+    "test": "node test/scripts/run-tests.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pc": "prettier --check .",
+    "pw": "prettier --write ."
+  },
+  "dependencies": {
+    "ulid": "^3.0.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.2.2"
+  },
+  "prettier": {
+    "tabWidth": 2,
+    "arrowParens": "avoid",
+    "endOfLine": "auto",
+    "semi": false,
+    "singleQuote": true
+  }
+}
