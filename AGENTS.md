@@ -15,6 +15,7 @@ How an AI coding agent should work in this repo.
 - Ship tests in the same PR as the code they cover.
 - `npm test` must stay green without network or a paid API key.
 - Only `scripts/demo.ts` (later) may call a live model.
+- **Do not commit, push, or open a GitHub PR unless the user explicitly asks in that message.** “Implement PR N” / “go ahead with PR N” means code for Cursor review only — instruction to commit/push/PR from an earlier turn does not carry forward.
 
 ## Stack conventions
 
