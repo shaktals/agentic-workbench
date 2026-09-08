@@ -3,6 +3,7 @@
  *
  * Policy graph → `/log` scribe path, or classifier → one specialist.
  * Outbound `send_notice` parks for human approval (HITL).
+ * Optional memory + JSON traces under `var/`.
  */
 
 import { ulid } from 'ulid'
@@ -14,6 +15,11 @@ import {
   type HitlPort,
   type NoticeDraft,
 } from '#hitl/port.ts'
+import {
+  createMemoryPort,
+  defaultMemoryFilePath,
+  type MemoryPort,
+} from '#memory/index.ts'
 import { ok, type Result } from '#result.ts'
 import {
   createMemoryEventStore,
@@ -23,7 +29,13 @@ import {
   type LlmPort,
   type LoggedEvent,
 } from '#tools/index.ts'
-import type { TraceRun, TraceRunStatus, TraceStep } from '#tracing/types.ts'
+import {
+  formatTraceSummary,
+  writeTraceJson,
+  type TraceRun,
+  type TraceRunStatus,
+  type TraceStep,
+} from '#tracing/index.ts'
 
 import { evaluateInbound } from './evaluateInbound.ts'
 import type {
@@ -46,6 +58,15 @@ export type RunInput = {
   /** Auto-approve sends (demo `--yes` only). */
   autoApprove?: boolean
   maxSteps?: number
+  /** Thread id for scratchpad / long-term memory (defaults to inbound.id). */
+  threadId?: string
+  memory?: MemoryPort
+  /** Persist memory notes under this root (`var/memory.json`). */
+  memoryRootDir?: string
+  /** When true (default if varRoot set), write `var/traces/<id>.json`. */
+  persistTrace?: boolean
+  /** Root for traces + default HITL/memory dirs. */
+  varRootDir?: string
   now?: () => Date
   createOperationId?: () => string
   createEventId?: () => string
@@ -60,17 +81,27 @@ export type RunOutput = {
   clarificationQuestion?: string
   pendingPath?: string
   notice?: NoticeDraft
+  tracePath?: string
+  traceSummary?: string
 }
 
 function resolveHitl(input: RunInput): HitlPort {
   if (input.hitl) return input.hitl
-  if (input.hitlRootDir) {
+  const root = input.hitlRootDir ?? input.varRootDir
+  if (root) {
     return createFileHitlPort({
-      rootDir: input.hitlRootDir,
+      rootDir: root,
       autoApprove: input.autoApprove === true,
     })
   }
   return createMemoryHitlPort(input.autoApprove ? 'approved' : 'pending')
+}
+
+function resolveMemory(input: RunInput): MemoryPort | undefined {
+  if (input.memory) return input.memory
+  const root = input.memoryRootDir ?? input.varRootDir
+  if (!root) return undefined
+  return createMemoryPort({ filePath: defaultMemoryFilePath(root) })
 }
 
 function pushStep(steps: TraceStep[], step: Omit<TraceStep, 'index'>): void {
@@ -87,6 +118,8 @@ export async function run(input: RunInput): Promise<Result<RunOutput>> {
   const operationId = createId()
   const catalog = input.catalog ?? loadHarborCatalog()
   const hitl = resolveHitl(input)
+  const memory = resolveMemory(input)
+  const threadId = input.threadId ?? input.inbound.id
 
   const decision = evaluateInbound(input.inbound, input.env ?? {})
 
@@ -105,12 +138,30 @@ export async function run(input: RunInput): Promise<Result<RunOutput>> {
     },
   ]
 
+  if (memory) {
+    memory.appendScratch(
+      threadId,
+      `inbound:${input.inbound.body.slice(0, 200)}`,
+    )
+    const selfNotes = memory.retrieveForSelfContext(threadId, 5)
+    pushStep(steps, {
+      type: 'memory',
+      agent: 'system',
+      summary: `scratch+self_notes:${selfNotes.length}`,
+      args: { threadId },
+      result: {
+        scratchLines: memory.readScratch(threadId).lines.length,
+        selfContextNotes: selfNotes.map(n => n.id),
+      },
+    })
+  }
+
   let status: TraceRunStatus = decision.action === 'skip' ? 'skipped' : 'ok'
   let loggedEvents: LoggedEvent[] | undefined
   let clarificationQuestion: string | undefined
   let pendingPath: string | undefined
   let notice: NoticeDraft | undefined
-  let shouldContinue = false
+  const shouldContinue = false
 
   if (decision.action === 'log') {
     const result = await runLogPath({
@@ -121,7 +172,6 @@ export async function run(input: RunInput): Promise<Result<RunOutput>> {
       steps,
       now,
     })
-
     status = result.status
     loggedEvents = result.loggedEvents
     clarificationQuestion = result.clarificationQuestion
@@ -135,7 +185,6 @@ export async function run(input: RunInput): Promise<Result<RunOutput>> {
       steps,
       now,
     })
-
     status = result.status
     pendingPath = result.pendingPath
     notice = result.notice
@@ -163,7 +212,6 @@ export async function run(input: RunInput): Promise<Result<RunOutput>> {
       })
       status = 'failed'
     } else {
-      // specialist path already includes priorSteps by reference copy — replace
       steps.length = 0
       steps.push(...specialist.data.steps)
       loggedEvents = specialist.data.loggedEvents
@@ -179,7 +227,42 @@ export async function run(input: RunInput): Promise<Result<RunOutput>> {
     status = 'ok'
   }
 
+  if (memory && loggedEvents && loggedEvents.length > 0) {
+    for (const event of loggedEvents) {
+      const written = memory.writeNote({
+        threadId,
+        text: `logged ${event.eventTypeId} vessel=${event.vesselId ?? '-'} slip=${event.slipId ?? '-'}`,
+        attribution: 'self',
+      })
+      if (written) {
+        pushStep(steps, {
+          type: 'memory',
+          agent: 'scribe',
+          summary: 'note_written',
+          result: { noteId: written.id },
+        })
+      }
+    }
+  }
+
   const finished = now()
+  const trace: TraceRun = {
+    operationId,
+    startedAt: started.toISOString(),
+    finishedAt: finished.toISOString(),
+    status,
+    steps,
+  }
+
+  let tracePath: string | undefined
+  const shouldPersist =
+    input.persistTrace === true ||
+    (input.persistTrace !== false && Boolean(input.varRootDir))
+
+  if (shouldPersist && input.varRootDir) {
+    tracePath = writeTraceJson(trace, input.varRootDir).path
+  }
+
   return ok({
     operationId,
     decision,
@@ -188,13 +271,9 @@ export async function run(input: RunInput): Promise<Result<RunOutput>> {
     clarificationQuestion,
     pendingPath,
     notice,
-    trace: {
-      operationId,
-      startedAt: started.toISOString(),
-      finishedAt: finished.toISOString(),
-      status,
-      steps,
-    },
+    trace,
+    tracePath,
+    traceSummary: formatTraceSummary(trace),
   })
 }
 
@@ -298,7 +377,6 @@ async function runNoticeCommand(args: {
 }> {
   const { remainder, operationId, catalog, hitl, steps, now } = args
 
-  // Force clerk seat for explicit /notice
   const specialist = await runSpecialistPath({
     text: remainder,
     operationId,

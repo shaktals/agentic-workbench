@@ -119,6 +119,11 @@ describe('handleLog', () => {
     assert.equal(result.data?.status, 'needs_clarification')
     assert.equal(result.data?.clarificationQuestion, 'Which vessel took fuel?')
     assert.equal(result.data?.events.length, 0)
+    const llmStep = result.data?.steps.find(s => s.type === 'llm')
+    assert.deepEqual(llmStep?.result, {
+      kind: 'clarification',
+      question: 'Which vessel took fuel?',
+    })
   })
 
   it('rejects disallowed ids after mock LLM invents them', async () => {

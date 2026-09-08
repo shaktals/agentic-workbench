@@ -15,7 +15,9 @@
   "scripts": {
     "test": "node test/scripts/run-tests.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "demo": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env --experimental-strip-types scripts/demo.ts",
     "approve": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/approve.ts",
+    "clean:var": "rm -rf var/traces var/pending var/outbound var/memory.json",
     "pc": "prettier --check .",
     "pw": "prettier --write ."
   },

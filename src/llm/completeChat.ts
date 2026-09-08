@@ -79,10 +79,7 @@ async function fetchChat(
         error: e,
       })
       return err(
-        llmError(
-          'LLM_TIMEOUT',
-          `LLM request timed out after ${timeoutMs}ms.`,
-        ),
+        llmError('LLM_TIMEOUT', `LLM request timed out after ${timeoutMs}ms.`),
       )
     }
 

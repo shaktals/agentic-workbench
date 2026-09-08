@@ -6,3 +6,9 @@ export type {
   TraceStep,
   TraceStepType,
 } from './types.ts'
+export {
+  formatTraceSummary,
+  traceFilePath,
+  tracesDir,
+  writeTraceJson,
+} from './persist.ts'
