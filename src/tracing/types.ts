@@ -1,6 +1,6 @@
 /**
  * Structured traces for one agent run.
- * Persistence (jsonl) lands in a later PR; these types are the contract.
+ * Persistence: `writeTraceJson` → `var/traces/<operationId>.json`.
  */
 
 export type TraceAgentId =

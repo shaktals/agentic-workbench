@@ -53,6 +53,18 @@ export type ExtractLogResult =
   | { kind: 'events'; events: z.infer<typeof eventSchema>[] }
   | { kind: 'clarification'; question: string }
 
+export type ExtractLogMeta = {
+  model?: string
+  latencyMs?: number
+  tokens?: {
+    promptTokens?: number
+    completionTokens?: number
+    totalTokens?: number
+  }
+}
+
+export type ExtractLogSuccess = ExtractLogResult & { meta: ExtractLogMeta }
+
 function parseJsonObject(
   text: string,
 ): Result<unknown, { code: string; message: string }> {
@@ -93,6 +105,11 @@ function buildSystemPrompt(catalog: HarborCatalog): string {
   ].join('\n')
 }
 
+type ExtractLogEventsResult = Result<
+  ExtractLogSuccess,
+  { code: string; message: string; details?: unknown }
+>
+
 /**
  * LLM extract for `/log` remainder. Output is still untrusted — allowlist next.
  */
@@ -101,9 +118,7 @@ export async function extractLogEvents(input: {
   catalog: HarborCatalog
   userText: string
   subjectId?: string
-}): Promise<
-  Result<ExtractLogResult, { code: string; message: string; details?: unknown }>
-> {
+}): Promise<ExtractLogEventsResult> {
   const llmResult = await input.llm.completeChat({
     systemPrompt: buildSystemPrompt(input.catalog),
     messages: [{ role: 'user', content: input.userText }],
@@ -123,6 +138,12 @@ export async function extractLogEvents(input: {
     })
   }
 
+  const meta: ExtractLogMeta = {
+    model: llmResult.data.model,
+    latencyMs: llmResult.data.latencyMs,
+    tokens: llmResult.data.usage,
+  }
+
   const parsed = parseJsonObject(llmResult.data.text)
   if (parsed.error) return parsed
 
@@ -139,8 +160,9 @@ export async function extractLogEvents(input: {
     return ok({
       kind: 'clarification',
       question: shaped.data.clarificationQuestion,
+      meta,
     })
   }
 
-  return ok({ kind: 'events', events: shaped.data.events })
+  return ok({ kind: 'events', events: shaped.data.events, meta })
 }

@@ -6,7 +6,12 @@ export {
 } from './catalogTools.ts'
 export type { CatalogHit, MatchResult } from './catalogTools.ts'
 export { extractLogEvents, extractLogLlmSchema } from './extractLogEvents.ts'
-export type { ExtractLogResult, LlmPort } from './extractLogEvents.ts'
+export type {
+  ExtractLogResult,
+  ExtractLogMeta,
+  ExtractLogSuccess,
+  LlmPort,
+} from './extractLogEvents.ts'
 export { handleLog } from './handleLog.ts'
 export type { HandleLogInput, HandleLogOutput } from './handleLog.ts'
 export { handleNotice } from './handleNotice.ts'

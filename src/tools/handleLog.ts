@@ -64,8 +64,17 @@ export async function handleLog(
     args: { remainderPreview: input.remainder.slice(0, 120) },
     result: extracted.error
       ? { error: extracted.error }
-      : { kind: extracted.data.kind },
-    latencyMs: Date.now() - startedExtract,
+      : extracted.data.kind === 'clarification'
+        ? {
+            kind: 'clarification',
+            question: extracted.data.question,
+          }
+        : { kind: extracted.data.kind },
+    latencyMs: extracted.error
+      ? Date.now() - startedExtract
+      : (extracted.data.meta.latencyMs ?? Date.now() - startedExtract),
+    tokens: extracted.error ? undefined : extracted.data.meta.tokens,
+    model: extracted.error ? undefined : extracted.data.meta.model,
   })
 
   if (extracted.error) {
